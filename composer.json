@@ -1,0 +1,31 @@
+{
+    "name": "yangshihe/yii2-weixinApi",
+    "description": "The ZUI extension for the Yii framework",
+    "keywords": ["yii2", "extension", "view", "theme", "plugin", "zui", "ZUI"],
+    "homepage": "https://github.com/yangshihe/yii2-weixinApi",
+    "type": "yii2-extension",
+    "language": "php",
+    "license": "BSD 3-Clause",
+    "minimum-stability": "stable",
+    "authors": [
+        {
+            "name": "yangshihe",
+            "email": "yangshihe@qq.com",
+            "homepage": "http://www.noooya.com/"
+        }
+    ],
+    "require": {
+        "php": ">=5.4.0",
+        "yiisoft/yii2": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "yangshihe\\weixinApi\\": ""
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "0.0.1-dev"
+        }
+    }
+}

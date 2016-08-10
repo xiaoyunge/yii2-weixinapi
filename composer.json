@@ -2,7 +2,7 @@
     "name": "yangshihe/yii2-weixinapi",
     "description": "The ZUI extension for the Yii framework",
     "keywords": ["yii2", "extension", "view", "theme", "plugin", "zui", "ZUI"],
-    "homepage": "https://github.com/yangshihe/yii2-weixinApi",
+    "homepage": "https://github.com/yangshihe/yii2-weixinapi",
     "type": "yii2-extension",
     "language": "php",
     "license": "BSD 3-Clause",

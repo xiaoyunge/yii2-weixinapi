@@ -3,7 +3,9 @@ namespace yangshihe\weixinapi\base;
 
 use Yii;
 use yii\helpers\Json;
-
+use DOMDocument;
+use DOMElement;
+use DOMText;
 /**
  * PHP WeixinApi API for Yii2
  *
@@ -41,6 +43,8 @@ class Weixin
 
     ];
 
+    public $itemTag = 'item'; //微信xml格式的 itemTag name
+
     public function __construct($config)
     {
 
@@ -68,6 +72,7 @@ class Weixin
 
         $this->appsecret = $this->config['appsecret'];
 
+        //配置缓存
         $this->cacheName['access_token'] = $this->appid;
 
         // unset($config);
@@ -95,7 +100,57 @@ class Weixin
         }
     }
 
-    //单用户 access_token//
+    /**
+     * 接口验证
+     * @param integer $scene_id
+     * @param string $token range in (QR_SCENE,QR_LIMIT_SCENE)
+     * @param string $echostr
+     */
+    public function valid($token, $echostr)
+    {
+
+        if($this->checkSignature($token)){
+            echo $echostr;
+            exit;
+        }
+    }
+
+
+
+
+
+    //解析服务器发送的xml
+    /*
+    *   必须配置xml可以被接收
+        'components' => [
+            'request' => [
+                //'cookieValidationKey' => '_DNA_ZG5hQmFja2Vu-weixin',
+                'parsers' => [
+                    'application/json' => 'yii\web\JsonParser',
+                    'text/xml' => 'bobchengbin\Yii2XmlRequestParser\XmlRequestParser',
+                    'application/xml' => 'bobchengbin\Yii2XmlRequestParser\XmlRequestParser',
+                ],
+            ],
+        ]
+    *
+    */
+
+    /**
+     * 接收微信post到指定api的xml内容,
+     *
+     * @return array
+     */
+    public function parsersRequest()
+    {
+        return Yii::$app->request->getBodyParams();
+    }
+
+
+
+    /**
+     * 获得 access_token
+     * @return string
+     */
     public function getAccessToken()
     {
         $url = 'https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=' . $this->appid . '&secret=' . $this->appsecret;
@@ -107,7 +162,6 @@ class Weixin
             $data = $this->get($url);
 
             $data = Json::decode($data);
-
 
             if (isset($data['errcode'])) {
 
@@ -128,9 +182,15 @@ class Weixin
     }
 
 
-    //获取永久二维码 QR_LIMIT_SCENE
-   //获取临时二维码 QR_SCENE
-   public function qrcode($scene_id, $qr = 'QR_LIMIT_SCENE', $time = 1800){
+    /**
+     * 获取临时二维码 QR_SCENE
+     * 获取永久二维码 QR_LIMIT_SCENE
+     * @param integer $scene_id
+     * @param string $qr range in (QR_SCENE,QR_LIMIT_SCENE)
+     * @param integer $time
+     * @return binary
+     */
+    public function qrcode($scene_id, $qr = 'QR_LIMIT_SCENE', $time = 1800){
 
         if ($qr == 'QR_LIMIT_SCENE') {
 
@@ -155,9 +215,9 @@ class Weixin
 
         $url = 'https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token=' . $this->access_token;
 
-        $datajson = $this->post($url, $postjson);
+        $dataJson = $this->post($url, $postjson);
 
-        $data = Json::decode($datajson);
+        $data = Json::decode($dataJson);
 
         if(isset($data['errcode'])) return $this->getError($data['errcode']) ;
 
@@ -165,6 +225,11 @@ class Weixin
 
    }
 
+    /**
+     * 根据ticket 获取二维码二进制图片文件,
+     * @param string $ticket
+     * @return binary
+     */
     public function getQrcode($ticket) {
 
         $ticketUrl = 'https://mp.weixin.qq.com/cgi-bin/showqrcode?ticket=' . $ticket;
@@ -178,6 +243,31 @@ class Weixin
     }
 
 
+    /**
+     * 获取关注者的详细信息
+     * @param string $openid
+     * @return mixed
+     */
+    public function userInfo($openid){
+
+
+        $url = 'https://api.weixin.qq.com/cgi-bin/user/info?access_token=' . $this->access_token . '&openid=' . $openid . '&lang=zh_CN ';
+
+        $dataJson = $this->get($url);
+
+        $data = Json::decode($dataJson);
+
+        if(isset($data['errcode'])) return $this->getError($data['errcode']) ;
+
+        return $data;
+
+   }
+
+    /**
+     * get 请求,
+     * @param string $url
+     * @return mixed
+     */
     public function get($url)
     {
 
@@ -194,7 +284,12 @@ class Weixin
         return $response;
 
    }
-
+    /**
+     * post 请求,
+     * @param string $url
+     * @param json $json encode
+     * @return mixed
+     */
     public function post($url, $json)
     {
 
@@ -221,6 +316,59 @@ class Weixin
 
          return $tmpInfo;
 
+    }
+
+    /**
+     * 创建微信格式的XML
+     * @param array $data
+     * @param null $charset
+     * @return string
+     */
+    public function xml(array $data, $charset = null)
+    {
+        $dom = new DOMDocument('1.0', $charset === null ? Yii::$app->charset : $charset);
+        $root = new DOMElement('xml');
+        $dom->appendChild($root);
+        $this->buildXml($root, $data);
+        $xml = $dom->saveXML();
+        return trim(substr($xml, strpos($xml, '?>') + 2));
+    }
+
+
+    /**
+     * @see yii\web\XmlResponseFormatter::buildXml()
+     */
+    protected function buildXml($element, $data)
+    {
+        if (is_object($data)) {
+            $child = new DOMElement(StringHelper::basename(get_class($data)));
+            $element->appendChild($child);
+            if ($data instanceof Arrayable) {
+                $this->buildXml($child, $data->toArray());
+            } else {
+                $array = [];
+                foreach ($data as $name => $value) {
+                    $array[$name] = $value;
+                }
+                $this->buildXml($child, $array);
+            }
+        } elseif (is_array($data)) {
+            foreach ($data as $name => $value) {
+                if (is_int($name) && is_object($value)) {
+                    $this->buildXml($element, $value);
+                } elseif (is_array($value) || is_object($value)) {
+                    $child = new DOMElement(is_int($name) ? $this->itemTag : $name);
+                    $element->appendChild($child);
+                    $this->buildXml($child, $value);
+                } else {
+                    $child = new DOMElement(is_int($name) ? $this->itemTag : $name);
+                    $element->appendChild($child);
+                    $child->appendChild(new DOMText((string) $value));
+                }
+            }
+        } else {
+            $element->appendChild(new DOMText((string) $data));
+        }
     }
 
     public function getError($errcode)

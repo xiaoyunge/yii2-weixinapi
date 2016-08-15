@@ -34,6 +34,8 @@ class Weixin
 
     public $media_id;
 
+    public $requestData;
+
     private $config;
 
     private $_token;
@@ -115,6 +117,28 @@ class Weixin
         }
     }
 
+    /**
+     * 数据签名
+     * @param array $data
+     * @return string
+     */
+    /* 参考就好
+    public static function sign($data)
+    {
+        ksort($data);
+        $string1 = "";
+        foreach ($data as $k => $v) {
+            if ($v) {
+                $string1 .= "$k=$v&";
+            }
+        }
+        $stringSignTemp = $string1 . "key=" . $this->config["key"];
+        $sign = strtoupper(md5($stringSignTemp));
+
+        return $sign;
+    }
+    */
+
 
 
 
@@ -142,9 +166,37 @@ class Weixin
      */
     public function parsersRequest()
     {
-        return Yii::$app->request->getBodyParams();
+        $this->requestData = Yii::$app->request->getBodyParams();
+        return $this->requestData;
     }
 
+    /**
+     * 把请求后获得的微信公众号结构的xml字符串解析为 数组格式
+     * @param string $str
+     * @return array
+     */
+    public function parsersXML($str)
+    {
+        return (array) simplexml_load_string($str, 'SimpleXMLElement', LIBXML_NOCDATA);
+    }
+
+    /**
+     * 响应微信的请求,
+     * @see yangshihe\weixinapi\base\ReplyMessage
+     * @param mixed $data
+     * @param $type range in (text, image, voice, music, video, news)
+     * @return string xml
+     */
+    public function message($data, $type ='text')
+    {
+        $replyMessage = new ReplyMessage($this->requestData['FromUserName'], $this->requestData['ToUserName']);
+
+        $xmlData = $replyMessage->message($data, $type);
+
+        echo $this->xml($xmlData);
+
+        exit();
+    }
 
 
     /**

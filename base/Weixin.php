@@ -110,7 +110,6 @@ class Weixin
      */
     public function valid($token, $echostr)
     {
-
         if($this->checkSignature($token)){
             echo $echostr;
             exit;
@@ -225,7 +224,7 @@ class Weixin
 
             $access_token = $data['access_token'];
 
-            Yii::$app->cache->set($this->cacheName['access_token'], $access_token, 6000);
+            Yii::$app->cache->set($this->cacheName['access_token'], $access_token, 5000);
 
         }
 
@@ -332,7 +331,6 @@ class Weixin
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         $response = curl_exec($ch);
         curl_close($ch);
-
         return $response;
 
    }
@@ -351,22 +349,18 @@ class Weixin
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
         curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (compatible; MSIE 5.01; Windows NT 5.0)');
-
         if (ini_get('open_basedir') == '' && ini_get('safe_mode' == 'Off')) {
             curl_setopt($curl, CURLOPT_FOLLOWLOCATION, 1);
         }
         curl_setopt($ch, CURLOPT_AUTOREFERER, 1);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $json);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
         $tmpInfo = curl_exec($ch);
-
         if (curl_errno($ch)) {
             return 'Errno'.curl_error($ch);
         }
-         curl_close($ch);
-
-         return $tmpInfo;
+        curl_close($ch);
+        return $tmpInfo;
 
     }
 

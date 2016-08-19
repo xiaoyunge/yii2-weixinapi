@@ -208,7 +208,9 @@ class Weixin
 
         $access_token = Yii::$app->cache->get($this->cacheName['access_token']);
 
-        if (!$access_token) {
+        if (!$access_token || !isset($access_token['time']) ||  $access_token['time'] > (time())) {
+
+            $access_token = [];
 
             $data = $this->get($url);
 
@@ -222,13 +224,15 @@ class Weixin
 
             }
 
-            $access_token = $data['access_token'];
+            $access_token['data'] = $data['access_token'];
+
+            $access_token['time'] = time() + 5000;
 
             Yii::$app->cache->set($this->cacheName['access_token'], $access_token, 5000);
 
         }
 
-        $this->access_token = $access_token;
+        $this->access_token = $access_token['data'];
 
     }
 

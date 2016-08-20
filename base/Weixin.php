@@ -42,6 +42,7 @@ class Weixin
 
     private $cacheName = [
         'access_token' => '',
+        'jsapi_ticket' => '',
 
     ];
 
@@ -76,6 +77,7 @@ class Weixin
 
         //配置缓存
         $this->cacheName['access_token'] = $this->appid;
+        $this->cacheName['jsapi_ticket'] = $this->appid . 'jsapi_ticket';
 
         // unset($config);
 
@@ -197,6 +199,95 @@ class Weixin
         exit();
     }
 
+    /**
+     * 配置当前页面接口所需要的 jsticket,
+     * @return string array
+     */
+    public function getSignPackage() {
+
+        $jsapiTicket = $this->getJsApiTicket();
+
+        // 注意 URL 一定要动态获取，不能 hardcode.
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+        $url = "$protocol$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+
+        $timestamp = time();
+
+        $nonceStr = $this->createNonceStr();
+
+        // 这里参数的顺序要按照 key 值 ASCII 码升序排序
+        $string = "jsapi_ticket=$jsapiTicket&noncestr=$nonceStr&timestamp=$timestamp&url=$url";
+
+        $signature = sha1($string);
+
+        $signPackage = array(
+          "appId"     => $this->appid,
+          "nonceStr"  => $nonceStr,
+          "timestamp" => $timestamp,
+          "url"       => $url,
+          "signature" => $signature,
+          "rawString" => $string
+        );
+
+        return $signPackage;
+    }
+
+    /**
+     * 16位 随机数
+     * @return string
+     */
+    private function createNonceStr($length = 16) {
+        $chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        $str = "";
+        for ($i = 0; $i < $length; $i++) {
+          $str .= substr($chars, mt_rand(0, strlen($chars) - 1), 1);
+        }
+        return $str;
+    }
+
+    /**
+     * 获得 access_token
+     * @param mixed $accessToken
+     * @return string jsapi_ticket
+     */
+    private function getJsApiTicket() {
+
+
+        $jsapi_ticket = Yii::$app->cache->get($this->cacheName['jsapi_ticket']);
+
+
+        $url = 'https://api.weixin.qq.com/cgi-bin/ticket/getticket?type=jsapi&access_token=' . $this->access_token;
+
+
+        if (!$jsapi_ticket || !isset($jsapi_ticket['time']) ||  $jsapi_ticket['time'] > (time())) {
+
+            $jsapi_ticket = [];
+
+            $data = $this->Tkget($url);
+
+            $data = Json::decode($data);
+
+            if (isset($data['errcode']) && $data['errmsg'] != 'ok') {
+
+                $message = '获取jsapi_ticket错误：' . $this->getError($data['errcode']);
+
+                throw new \yii\web\ServerErrorHttpException($message);
+
+            }
+
+            $jsapi_ticket['data'] = $data['ticket'];
+
+            $jsapi_ticket['time'] = time() + 5000;
+
+            Yii::$app->cache->set($this->cacheName['jsapi_ticket'], $jsapi_ticket, 5000);
+
+        }
+
+        $this->jsapi_ticket = $jsapi_ticket['data'];
+
+        return $this->jsapi_ticket;
+    }
+
 
     /**
      * 获得 access_token
@@ -233,6 +324,8 @@ class Weixin
         }
 
         $this->access_token = $access_token['data'];
+
+        return $this->access_token;
 
     }
 
@@ -338,6 +431,27 @@ class Weixin
         return $response;
 
    }
+
+   /**
+     * get 请求2, 没有仔细研究这个 是js取票用的
+     * @param string $url
+     * @return mixed
+     */
+    private function Tkget($url) {
+        $curl = curl_init();
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_TIMEOUT, 500);
+        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 2);
+        curl_setopt($curl, CURLOPT_URL, $url);
+        $res = curl_exec($curl);
+        curl_close($curl);
+
+        return $res;
+    }
+
+
+
     /**
      * post 请求,
      * @param string $url

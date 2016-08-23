@@ -6,6 +6,7 @@ use yii\helpers\Json;
 use DOMDocument;
 use DOMElement;
 use DOMText;
+
 /**
  * PHP WeixinApi API for Yii2
  *
@@ -406,6 +407,27 @@ class Weixin
         $data = Json::decode($dataJson);
 
         if(isset($data['errcode'])) return $this->getError($data['errcode']) ;
+
+        return $data;
+
+   }
+
+   /**
+     * 创建菜单
+     * @param array $data
+     * @return mixed
+     */
+    public function createMenu($data){
+
+        $url = 'https://api.weixin.qq.com/cgi-bin/menu/create?access_token=' . $this->access_token;
+
+        $data = Json::encode($data);
+
+        $dataJson = $this->post($url, $data);
+
+        $data = Json::decode($dataJson);
+
+        if(isset($data['errcode']) && $data['errmsg'] != 'ok') return $this->getError($data['errcode']) ;
 
         return $data;
 

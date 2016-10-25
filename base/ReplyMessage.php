@@ -9,7 +9,7 @@ use yii\helpers\Json;
  *
  *@package common\helpers
  *@author yuzhiyang <yangshihe@qq.com>
- *@copyright DNA <http://www.Noooya.com/>
+ *@copyright yangshihe <yangshihe@qq.com/>
  *@version 1.0.0
  *@since 2016年8月11日
  *@todo

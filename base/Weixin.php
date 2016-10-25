@@ -12,7 +12,7 @@ use DOMText;
  *
  *@package common\helpers
  *@author yuzhiyang <yangshihe@qq.com>
- *@copyright DNA <http://www.Noooya.com/>
+ *@copyright yangshihe <yangshihe@qq.com/>
  *@version 1.0.0
  *@since 2016年8月10日
  *@todo
